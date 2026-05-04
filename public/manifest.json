@@ -1,0 +1,17 @@
+{
+  "name": "GameVault",
+  "short_name": "GameVault",
+  "description": "Seu rastreador de jogos de última geração",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d1229",
+  "theme_color": "#00eefc",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3408/3408506.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

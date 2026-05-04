@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-manrope-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-space: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+
+  --color-surface: #0d1229;
+  --color-surface-container: #191e36;
+  --color-secondary-container: #00eefc;
+  --color-tertiary: #00e38b;
+  --color-primary: #d1bfe9;
+  --color-on-background: #dde1ff;
+  --color-outline: #948f98;
+}
+
+@layer base {
+  body {
+    @apply bg-surface text-on-background antialiased;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-surface/40 backdrop-blur-xl border border-white/10;
+  }
+  
+  .glass-card {
+    @apply bg-surface-container/50 backdrop-blur-2xl border border-white/5 transition-all duration-300;
+  }
+  
+  .glass-card:hover {
+    @apply border-secondary-container shadow-[0_0_20px_rgba(0,238,252,0.15)];
+  }
+
+  .neon-glow {
+    @apply shadow-[0_0_20px_rgba(0,238,252,0.3)];
+  }
+}
+
