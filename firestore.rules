@@ -24,7 +24,7 @@ service cloud.firestore {
     }
 
     function existing() {
-      return resource.data;
+      return resource == null ? null : resource.data;
     }
 
     // --- Game Validation ---
