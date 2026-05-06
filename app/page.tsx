@@ -323,16 +323,25 @@ const GameModal = ({
       }
       
       console.log("AI Raw Response (Search):", responseText);
-      const gameData = JSON.parse(cleanJson);
-      setSearchResults(Array.isArray(gameData) ? gameData : []);
+      try {
+        const gameData = JSON.parse(cleanJson);
+        setSearchResults(Array.isArray(gameData) ? gameData : []);
+      } catch (jsonErr) {
+        console.error("JSON Parse Error:", jsonErr, "On text:", cleanJson);
+        throw new Error(`Erro de formato JSON da IA: ${jsonErr instanceof Error ? jsonErr.message : 'Desconhecido'}`);
+      }
     } catch (error: unknown) {
       const err = error as Error & { error?: { message?: string } };
       console.error("Search Error detailed:", err);
       
-      if (err.message?.includes("API key not valid")) {
-        showToast("Chave Gemini inválida no ambiente local ou Vercel.", "error");
+      let errorMessage = "Erro na busca inteligente";
+      if (err.message) errorMessage = err.message;
+      if (err.error?.message) errorMessage = err.error.message;
+
+      if (errorMessage.includes("API key not valid")) {
+        showToast("Chave Gemini inválida ou não configurada (NEXT_PUBLIC_GEMINI_API_KEY)", "error");
       } else {
-        showToast("Erro na busca inteligente. Tente novamente.", "error");
+        showToast(`Falha na busca: ${errorMessage.substring(0, 50)}`, "error");
       }
       setSearchResults([]);
     } finally {
@@ -401,23 +410,28 @@ const GameModal = ({
       }
       
       console.log("AI Raw Response (Covers):", responseText);
-      const images = JSON.parse(cleanJson);
-      setImageOptions(Array.isArray(images) ? images : []);
+      try {
+        const images = JSON.parse(cleanJson);
+        setImageOptions(Array.isArray(images) ? images : []);
+      } catch (jsonErr) {
+        console.error("JSON Parse Error:", jsonErr, "On text:", cleanJson);
+        throw new Error(`Erro de formato JSON da IA: ${jsonErr instanceof Error ? jsonErr.message : 'Desconhecido'}`);
+      }
     } catch (error: unknown) {
       const err = error as Error & { error?: { message?: string } };
       console.error("Image Search Error detailed:", err);
-      // Log the actual response if possible
-      if (typeof window !== 'undefined') {
-        console.log("Falha ao processar resposta AI. Verifique o formato JSON.");
-      }
+      
+      let errorMessage = "Erro desconhecido ao buscar capas";
+      if (err.message) errorMessage = err.message;
+      if (err.error?.message) errorMessage = err.error.message;
 
       // Catch specific "API key not valid" error
-      if (err.message?.includes("API key not valid") || (err.error?.message?.includes("API key not valid"))) {
-        showToast("Chave Gemini inválida. Verifique os Secrets nos Settings.", "error");
+      if (errorMessage.includes("API key not valid")) {
+        showToast("Chave Gemini inválida ou não configurada no Vercel (NEXT_PUBLIC_GEMINI_API_KEY)", "error");
         return;
       }
 
-      showToast("Erro ao buscar capas.", "error");
+      showToast(`Falha: ${errorMessage.substring(0, 50)}...`, "error");
     } finally {
       setIsSearchingImages(false);
     }
