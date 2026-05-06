@@ -326,8 +326,8 @@ const GameModal = ({
       });
       
       const result = await model.generateContent(`Find information for game: "${queryStr}". Return JSON list of 3 relevant games. 
-        Each: {title, platform, image (Direct URL of official box art or high-quality cover), id (slug), rating (0-10), description}. 
-        IMPORTANT: Use highly reliable sources like Wikipedia/Wikimedia Commons, Steam, IGDB, or official sites.
+        Each: {title, platform, image (Direct URL of official box art or high-quality cover from Xbox.com, PlayStation.com or Nintendo.com), id (slug), rating (0-10), description}. 
+        IMPORTANT: Use highly reliable official sources (Xbox, PlayStation, Nintendo), Steam or Wikipedia.
         Always provide the "description" in Brazilian Portuguese (Português do Brasil).`);
       
       const responseText = result.response.text();
@@ -412,7 +412,7 @@ const GameModal = ({
       
       const result = await model.generateContent(`Find vertical game cover art or high-quality box art for: "${query}". 
         Return a JSON list of 12 relevant and high-quality image URLs and their sources.
-        CRITICAL: Prioritize images from Wikipedia, Wikimedia Commons, Steam, IGDB, or official publishers.
+        CRITICAL: Focus exclusively on official images from Xbox.com, PlayStation.com, Nintendo.com, Wikipedia (official art only), or Steam.
         Ensure URLs are direct to images (ending in .jpg, .png, etc.).`);
       
       const responseText = result.response.text();
