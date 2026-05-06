@@ -36,16 +36,9 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Image from 'next/image';
-import { auth, db } from '../lib/firebase';
-import { firebaseService } from '../lib/firebaseService';
-import { Timestamp } from 'firebase/firestore';
-import { 
-  signInWithPopup, 
-  GoogleAuthProvider, 
-  signOut, 
-  onAuthStateChanged,
-  User
-} from 'firebase/auth';
+import { supabase } from '../lib/supabase';
+import { gameService } from '../lib/supabaseService';
+import { User } from '@supabase/supabase-js';
 import { Type } from "@google/genai";
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -73,9 +66,9 @@ interface Game {
   rating: number;
   image: string;
   description?: string;
-  ownerId: string;
-  createdAt: string;
-  updatedAt: string;
+  owner_id: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface Achievement {
@@ -884,7 +877,7 @@ const Header = ({
     <div className="flex items-center gap-4">
       <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#00dbe9]">
         <Image 
-          src={user?.photoURL || "https://picsum.photos/seed/avatar/200/200"} 
+          src={user?.user_metadata?.avatar_url || "https://picsum.photos/seed/avatar/200/200"} 
           alt="Avatar" 
           width={40} 
           height={40} 
@@ -1513,7 +1506,7 @@ const GameDetailsView = ({
                 Adicionado em
               </p>
               <p className="text-white font-medium">
-                {new Date(game.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                {new Date(game.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
               </p>
             </div>
             <div className="glass-panel p-6 rounded-3xl space-y-2">
@@ -1522,7 +1515,7 @@ const GameDetailsView = ({
                 Última Atualização
               </p>
               <p className="text-white font-medium">
-                {new Date(game.updatedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                {new Date(game.updated_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
               </p>
             </div>
           </div>
@@ -1717,12 +1710,12 @@ const CreditsModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => voi
 
                     {/* DB Status */}
                     <div className="flex justify-between items-center bg-black/20 p-2 rounded-lg">
-                      <span className="text-[10px] text-[#948f98] uppercase">Banco de Dados:</span>
+                      <span className="text-[10px] text-[#948f98] uppercase">Banco de Dados (SQL):</span>
                       <span className={`text-[10px] font-bold ${
-                        (db) 
+                        (currentOrigin && !process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('placeholder')) 
                         ? "text-green-400" : "text-red-400"
                       }`}>
-                        {(db) 
+                        {(currentOrigin && !process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('placeholder')) 
                           ? "CONECTADO ✓" : "DESCONECTADO ✗"}
                       </span>
                     </div>
@@ -1875,15 +1868,55 @@ export default function App() {
   useEffect(() => {
     setCurrentOrigin(window.location.origin);
 
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+    };
+    checkSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
         setIsLoggingIn(false);
       }
     });
 
+    // Listener para o callback de autenticação (caso popup)
+    const handleAuthMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'SUPABASE_AUTH_SUCCESS') {
+        setUser(event.data.session.user);
+        setIsLoggingIn(false);
+        showToast("Bem-vindo!", "success");
+      }
+      if (event.data?.type === 'SUPABASE_AUTH_ERROR') {
+        showToast(event.data.message || "Erro na autenticação", "error");
+        setIsLoggingIn(false);
+      }
+    };
+    window.addEventListener('message', handleAuthMessage);
+
+    // Listener para o localStorage (caso cross-tab/popup em navegadores que bloqueiam postMessage)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'supabase-auth-event') {
+        try {
+          const authData = JSON.parse(e.newValue || '{}');
+          if (authData.type === 'SUPABASE_AUTH_SUCCESS') {
+            setUser(authData.session.user);
+            setIsLoggingIn(false);
+            showToast("Bem-vindo!", "success");
+            localStorage.removeItem('supabase-auth-event');
+          }
+        } catch (err) {
+          console.error("Erro ao tratar evento de storage auth:", err);
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
     return () => {
-      unsubscribe();
+      subscription.unsubscribe();
+      window.removeEventListener('message', handleAuthMessage);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, [router]);
 
@@ -1919,24 +1952,26 @@ export default function App() {
 
   useEffect(() => {
     if (user) {
-      const unsubscribe = firebaseService.subscribeToGames((data) => {
-        const mappedGames: Game[] = data.map(g => ({
-          id: g.id,
-          title: g.title,
-          platform: g.platform,
-          status: g.status,
-          rating: g.rating,
-          image: g.image || '',
-          description: g.description,
-          ownerId: g.ownerId,
-          createdAt: g.createdAt instanceof Timestamp ? g.createdAt.toDate().toISOString() : new Date().toISOString(),
-          updatedAt: g.updatedAt instanceof Timestamp ? g.updatedAt.toDate().toISOString() : new Date().toISOString(),
-        }));
-        setGames(mappedGames);
-      });
+      const fetchGames = async () => {
+        try {
+          const data = await gameService.getGames();
+          setGames(data as Game[]);
+        } catch (error) {
+          console.error("Error fetching games:", error);
+        }
+      };
+      
+      fetchGames();
+
+      const channel = supabase
+        .channel('games_realtime')
+        .on('postgres_changes', { event: '*', table: 'games', filter: `owner_id=eq.${user.id}` }, () => {
+          fetchGames();
+        })
+        .subscribe();
 
       return () => {
-        unsubscribe();
+        supabase.removeChannel(channel);
       };
     } else {
       setGames([]);
@@ -1946,20 +1981,32 @@ export default function App() {
   const signIn = async () => {
     setIsLoggingIn(true);
     try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-      showToast("Bem-vindo de volta!", "success");
+      const redirectTo = `${window.location.origin}/auth/callback`;
+      
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          skipBrowserRedirect: false // Usando redirecionamento direto para maior compatibilidade Vercel
+        },
+      });
+      
+      if (error) throw error;
+      
     } catch (err: unknown) {
       const error = err as Error;
-      console.error("Auth exception:", error);
-      showToast("Erro ao iniciar login.", "error");
-    } finally {
+      console.error("Auth exception details:", error);
+      showToast(error.message || "Erro ao iniciar login.", "error");
       setIsLoggingIn(false);
     }
   };
 
   const handleLogOut = async () => {
-    await signOut(auth);
+    await supabase.auth.signOut();
   };
 
   const handleSaveGame = async (data: GameFormData) => {
@@ -1967,23 +2014,24 @@ export default function App() {
 
     try {
       if (editingGame) {
-        await firebaseService.updateGame(editingGame.id, {
+        await gameService.updateGame(editingGame.id, {
           title: data.title,
           platform: data.platform,
           status: data.status,
           rating: data.rating,
           image: data.image,
           description: data.description,
+          updated_at: new Date().toISOString()
         });
       } else {
-        await firebaseService.addGame({
-          ownerId: user.uid,
+        await gameService.addGame({
+          owner_id: user.id,
           title: data.title,
           platform: data.platform,
           status: data.status,
           rating: data.rating,
-          image: data.image,
-          description: data.description,
+          image: data.image || '',
+          description: data.description || '',
         });
       }
       setIsModalOpen(false);
@@ -1999,7 +2047,7 @@ export default function App() {
   const handleDeleteGame = async (id: string) => {
     setDeletingId(id);
     try {
-      await firebaseService.deleteGame(id);
+      await gameService.deleteGame(id);
       showToast("Jogo removido com sucesso!");
       if (selectedGame?.id === id) {
         setSelectedGame(null);
@@ -2119,7 +2167,7 @@ export default function App() {
                     <div className="flex flex-col sm:flex-row items-center gap-8 text-center sm:text-left">
                       <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-[#00dbe9] shadow-[0_0_30px_rgba(0,219,233,0.3)]">
                          <Image 
-                          src={user.photoURL || "https://picsum.photos/seed/avatar2/300/300"} 
+                          src={user.user_metadata?.avatar_url || "https://picsum.photos/seed/avatar2/300/300"} 
                           alt="Profile" 
                           width={128} 
                           height={128} 
@@ -2127,7 +2175,7 @@ export default function App() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <h2 className="text-4xl font-space font-bold text-white">{user.displayName || user.email}</h2>
+                        <h2 className="text-4xl font-space font-bold text-white">{user.user_metadata?.full_name || user.email}</h2>
                         <p className="text-[#00e38b] font-space text-sm tracking-widest font-bold uppercase">
                           MEMBRO ELITE • LVL {Math.floor(((games.length * 50) + (games.filter(g => g.status === 'Zerado').length * 200)) / 1000) + 1}
                         </p>

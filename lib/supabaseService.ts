@@ -20,21 +20,7 @@ export const gameService = {
       .select('*')
       .order('created_at', { ascending: false });
     
-    if (error) {
-      console.error("Supabase Error detail:", error);
-      let errorMessage = error.message;
-      
-      if (!errorMessage || errorMessage === '{}') {
-        // Handle cases where error is not a simple object or is a network error
-        if (error instanceof TypeError && error.message === 'Failed to fetch') {
-          errorMessage = "Falha na rede: Não foi possível conectar ao Supabase. Isso pode ser causado por bloqueadores de anúncios ou restrições do navegador (como o 'Prevent Cross-Site Tracking' no Safari).";
-        } else {
-          errorMessage = `Erro desconhecido no Supabase. Código: ${error.code || 'sem código'}. Verifique o console do navegador para detalhes técnicos.`;
-        }
-      }
-      
-      throw new Error(errorMessage);
-    }
+    if (error) throw error;
     return data as GameSupabase[];
   },
 
@@ -45,12 +31,7 @@ export const gameService = {
       .select()
       .single();
     
-    if (error) {
-      console.error("Supabase Insert Error detail:", error);
-      const err = error as { message?: string; error_description?: string; error?: string };
-      const errorMessage = err.message || err.error_description || err.error || JSON.stringify(error);
-      throw new Error(errorMessage === '{}' ? `Unknown error during insert. Code: ${error.code}` : errorMessage);
-    }
+    if (error) throw error;
     return data as GameSupabase;
   },
 
@@ -62,12 +43,7 @@ export const gameService = {
       .select()
       .single();
     
-    if (error) {
-      console.error("Supabase Update Error detail:", error);
-      const err = error as { message?: string; error_description?: string; error?: string };
-      const errorMessage = err.message || err.error_description || err.error || JSON.stringify(error);
-      throw new Error(errorMessage === '{}' ? `Unknown error during update. Code: ${error.code}` : errorMessage);
-    }
+    if (error) throw error;
     return data as GameSupabase;
   },
 
@@ -77,11 +53,6 @@ export const gameService = {
       .delete()
       .eq('id', id);
     
-    if (error) {
-      console.error("Supabase Delete Error detail:", error);
-      const err = error as { message?: string; error_description?: string; error?: string };
-      const errorMessage = err.message || err.error_description || err.error || JSON.stringify(error);
-      throw new Error(errorMessage === '{}' ? `Unknown error during delete. Code: ${error.code}` : errorMessage);
-    }
+    if (error) throw error;
   }
 };

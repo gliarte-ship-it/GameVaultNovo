@@ -11,13 +11,12 @@
   "dependencies": {
     "@google/genai": "latest",
     "@hookform/resolvers": "^3.9.1",
-    "@supabase/supabase-js": "^2.46.1",
+    "@supabase/supabase-js": "^2.105.3",
     "@tailwindcss/postcss": "^4.0.0",
     "autoprefixer": "^10.4.20",
     "clsx": "^2.1.1",
     "eslint": "^9.15.0",
     "eslint-config-next": "^15.2.0",
-    "firebase": "^11.5.0",
     "jspdf": "latest",
     "jspdf-autotable": "latest",
     "lucide-react": "latest",
@@ -33,7 +32,6 @@
     "zod": "latest"
   },
   "devDependencies": {
-    "@firebase/eslint-plugin-security-rules": "^0.0.2",
     "@types/node": "^20.17.6",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
