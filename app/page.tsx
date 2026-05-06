@@ -303,18 +303,9 @@ const GameModal = ({
         showToast("Gemini AI está desativada. Verifique as configurações nos Créditos.", "error");
         return;
       }
-      const result = await ai.models.generateContent({
+      const model = ai.getGenerativeModel({
         model: "gemini-1.5-flash",
-        contents: [{
-          role: "user",
-          parts: [{
-            text: `Find information for game: "${queryStr}". Return JSON list of 3 relevant games. 
-        Each: {title, platform, image (Direct URL of official box art or high-quality cover), id (slug), rating (0-10), description}. 
-        IMPORTANT: Use highly reliable sources like Wikipedia/Wikimedia Commons, Steam, IGDB, or official sites.
-        Always provide the "description" in Brazilian Portuguese (Português do Brasil).`
-          }]
-        }],
-        config: {
+        generationConfig: {
           responseMimeType: "application/json",
           responseSchema: {
             type: Type.ARRAY,
@@ -333,6 +324,11 @@ const GameModal = ({
           }
         }
       });
+      
+      const result = await model.generateContent(`Find information for game: "${queryStr}". Return JSON list of 3 relevant games. 
+        Each: {title, platform, image (Direct URL of official box art or high-quality cover), id (slug), rating (0-10), description}. 
+        IMPORTANT: Use highly reliable sources like Wikipedia/Wikimedia Commons, Steam, IGDB, or official sites.
+        Always provide the "description" in Brazilian Portuguese (Português do Brasil).`);
       
       const responseText = result.response.text();
       if (!responseText) throw new Error("Sem resposta do AI");
@@ -396,18 +392,9 @@ const GameModal = ({
         showToast("Gemini AI está desativada. Verifique as configurações nos Créditos.", "error");
         return;
       }
-      const result = await ai.models.generateContent({
+      const model = ai.getGenerativeModel({
         model: "gemini-1.5-flash",
-        contents: [{
-          role: "user",
-          parts: [{
-            text: `Find vertical game cover art or high-quality box art for: "${query}". 
-        Return a JSON list of 12 relevant and high-quality image URLs and their sources.
-        CRITICAL: Prioritize images from Wikipedia, Wikimedia Commons, Steam, IGDB, or official publishers.
-        Ensure URLs are direct to images (ending in .jpg, .png, etc.).`
-          }]
-        }],
-        config: {
+        generationConfig: {
           responseMimeType: "application/json",
           responseSchema: {
             type: Type.ARRAY,
@@ -422,6 +409,11 @@ const GameModal = ({
           }
         }
       });
+      
+      const result = await model.generateContent(`Find vertical game cover art or high-quality box art for: "${query}". 
+        Return a JSON list of 12 relevant and high-quality image URLs and their sources.
+        CRITICAL: Prioritize images from Wikipedia, Wikimedia Commons, Steam, IGDB, or official publishers.
+        Ensure URLs are direct to images (ending in .jpg, .png, etc.).`);
       
       const responseText = result.response.text();
       if (!responseText) throw new Error("Sem imagens encontradas");
