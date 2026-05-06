@@ -307,34 +307,33 @@ const GameModal = ({
       });
       
       const prompt = `Find information for game: "${queryStr}". Return ONLY a JSON array of 3 relevant games. 
-        Each: {"title": "string", "platform": "string", "image": "string (URL from Xbox.com, PlayStation.com, Nintendo.com, Steam or Wikipedia)", "id": "string", "rating": number, "description": "string"}. 
-        Always provide the "description" in Brazilian Portuguese (Português do Brasil).`;
+        Each: {"title": "string", "platform": "string", "image": "string (Direct URL from official Xbox.com, PlayStation.com, Nintendo.com or Steam)", "id": "string", "rating": number, "description": "string"}. 
+        Provide the "description" in Brazilian Portuguese.`;
 
       const result = await model.generateContent(prompt);
       const responseText = result.response.text();
       
       if (!responseText) throw new Error("Sem resposta do Gemini");
       
+      // Improved JSON extraction
+      let cleanJson = responseText;
       const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-      const cleanJson = jsonMatch ? jsonMatch[0] : responseText;
+      if (jsonMatch) {
+        cleanJson = jsonMatch[0];
+      }
       
-      console.log("AI Response for game info:", responseText); // Debug
+      console.log("AI Raw Response (Search):", responseText);
       const gameData = JSON.parse(cleanJson);
       setSearchResults(Array.isArray(gameData) ? gameData : []);
     } catch (error: unknown) {
       const err = error as Error & { error?: { message?: string } };
-      console.error("Search Error details:", err);
-      if (typeof window !== 'undefined') {
-        console.log("Falha ao processar resposta AI de busca.");
-      }
+      console.error("Search Error detailed:", err);
       
-      // Catch specific "API key not valid" error
-      if (err.message?.includes("API key not valid") || (err.error?.message?.includes("API key not valid"))) {
-        showToast("Chave Gemini inválida. Verifique os Secrets nos Settings.", "error");
-        return;
+      if (err.message?.includes("API key not valid")) {
+        showToast("Chave Gemini inválida no ambiente local ou Vercel.", "error");
+      } else {
+        showToast("Erro na busca inteligente. Tente novamente.", "error");
       }
-
-      showToast("Erro ao buscar jogo. Tente novamente.", "error");
       setSearchResults([]);
     } finally {
       setIsSearching(false);
@@ -385,26 +384,28 @@ const GameModal = ({
         model: "gemini-1.5-flash",
       });
       
-      const prompt = `Find vertical game cover art or high-quality box art for: "${query}". 
-        Return ONLY a JSON array of 12 objects with this structure: {"url": "string", "source": "string"}.
-        CRITICAL: Focus exclusively on official images from Xbox.com, PlayStation.com, Nintendo.com, Wikipedia (upload.wikimedia.org), or Steam.
-        Ensure URLs are direct to images (ending in .jpg, .png, etc.).`;
+      const prompt = `Find vertical cover art for: "${query}". 
+        Return ONLY a JSON array of 8 objects: {"url": "string", "source": "string"}.
+        CRITICAL: Use ONLY official direct image URLs from Xbox.com, PlayStation.com, Nintendo.com, Steam or Wikipedia.`;
 
       const result = await model.generateContent(prompt);
       const responseText = result.response.text();
       
       if (!responseText) throw new Error("Sem resposta do Gemini");
       
-      // Limpeza básica para garantir que pegamos apenas o JSON caso venha com markdown
+      // Improved JSON extraction
+      let cleanJson = responseText;
       const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-      const cleanJson = jsonMatch ? jsonMatch[0] : responseText;
+      if (jsonMatch) {
+        cleanJson = jsonMatch[0];
+      }
       
-      console.log("AI Response for images:", responseText); // Debug
+      console.log("AI Raw Response (Covers):", responseText);
       const images = JSON.parse(cleanJson);
       setImageOptions(Array.isArray(images) ? images : []);
     } catch (error: unknown) {
       const err = error as Error & { error?: { message?: string } };
-      console.error("Image Search Error details:", err);
+      console.error("Image Search Error detailed:", err);
       // Log the actual response if possible
       if (typeof window !== 'undefined') {
         console.log("Falha ao processar resposta AI. Verifique o formato JSON.");
@@ -1969,22 +1970,20 @@ export default function App() {
 
   const signIn = async () => {
     if (!supabase) {
-      showToast("Supabase não configurado. Adicione as chaves nos Secrets.", "error");
+      showToast("Supabase não configurado. Verifique os Secrets.", "error");
       return;
     }
     setIsLoggingIn(true);
     try {
-      const redirectTo = `${window.location.origin}/auth/callback`;
-      
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo,
+          redirectTo: `${origin}/auth/callback`,
           queryParams: {
             access_type: 'offline',
-            prompt: 'consent',
-          },
-          skipBrowserRedirect: false // Usando redirecionamento direto para maior compatibilidade Vercel
+            prompt: 'select_account',
+          }
         },
       });
       
@@ -1992,8 +1991,8 @@ export default function App() {
       
     } catch (err: unknown) {
       const error = err as Error;
-      console.error("Auth exception details:", error);
-      showToast(error.message || "Erro ao iniciar login.", "error");
+      console.error("Auth error:", error);
+      showToast("Erro ao iniciar login. Se ver erro 403, adicione seu email como Test User no Google Console.", "error");
       setIsLoggingIn(false);
     }
   };
