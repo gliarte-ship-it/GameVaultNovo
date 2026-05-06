@@ -39,7 +39,6 @@ import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 import { gameService } from '../lib/supabaseService';
 import { User } from '@supabase/supabase-js';
-import { Type } from "@google/genai";
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useForm } from 'react-hook-form';
@@ -305,39 +304,29 @@ const GameModal = ({
       }
       const model = ai.getGenerativeModel({
         model: "gemini-1.5-flash",
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                title: { type: Type.STRING },
-                platform: { type: Type.STRING },
-                image: { type: Type.STRING },
-                id: { type: Type.STRING },
-                rating: { type: Type.NUMBER },
-                description: { type: Type.STRING },
-              },
-              required: ["title", "platform", "image", "id"],
-            }
-          }
-        }
       });
       
-      const result = await model.generateContent(`Find information for game: "${queryStr}". Return JSON list of 3 relevant games. 
-        Each: {title, platform, image (Direct URL of official box art or high-quality cover from Xbox.com, PlayStation.com or Nintendo.com), id (slug), rating (0-10), description}. 
-        IMPORTANT: Use highly reliable official sources (Xbox, PlayStation, Nintendo), Steam or Wikipedia.
-        Always provide the "description" in Brazilian Portuguese (Português do Brasil).`);
-      
+      const prompt = `Find information for game: "${queryStr}". Return ONLY a JSON array of 3 relevant games. 
+        Each: {"title": "string", "platform": "string", "image": "string (URL from Xbox.com, PlayStation.com, Nintendo.com, Steam or Wikipedia)", "id": "string", "rating": number, "description": "string"}. 
+        Always provide the "description" in Brazilian Portuguese (Português do Brasil).`;
+
+      const result = await model.generateContent(prompt);
       const responseText = result.response.text();
-      if (!responseText) throw new Error("Sem resposta do AI");
       
-      const gameData = JSON.parse(responseText);
+      if (!responseText) throw new Error("Sem resposta do Gemini");
+      
+      const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+      const cleanJson = jsonMatch ? jsonMatch[0] : responseText;
+      
+      console.log("AI Response for game info:", responseText); // Debug
+      const gameData = JSON.parse(cleanJson);
       setSearchResults(Array.isArray(gameData) ? gameData : []);
     } catch (error: unknown) {
       const err = error as Error & { error?: { message?: string } };
       console.error("Search Error details:", err);
+      if (typeof window !== 'undefined') {
+        console.log("Falha ao processar resposta AI de busca.");
+      }
       
       // Catch specific "API key not valid" error
       if (err.message?.includes("API key not valid") || (err.error?.message?.includes("API key not valid"))) {
@@ -394,34 +383,32 @@ const GameModal = ({
       }
       const model = ai.getGenerativeModel({
         model: "gemini-1.5-flash",
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                url: { type: Type.STRING },
-                source: { type: Type.STRING }
-              },
-              required: ["url", "source"]
-            }
-          }
-        }
       });
       
-      const result = await model.generateContent(`Find vertical game cover art or high-quality box art for: "${query}". 
-        Return a JSON list of 12 relevant and high-quality image URLs and their sources.
-        CRITICAL: Focus exclusively on official images from Xbox.com, PlayStation.com, Nintendo.com, Wikipedia (official art only), or Steam.
-        Ensure URLs are direct to images (ending in .jpg, .png, etc.).`);
-      
+      const prompt = `Find vertical game cover art or high-quality box art for: "${query}". 
+        Return ONLY a JSON array of 12 objects with this structure: {"url": "string", "source": "string"}.
+        CRITICAL: Focus exclusively on official images from Xbox.com, PlayStation.com, Nintendo.com, Wikipedia (upload.wikimedia.org), or Steam.
+        Ensure URLs are direct to images (ending in .jpg, .png, etc.).`;
+
+      const result = await model.generateContent(prompt);
       const responseText = result.response.text();
-      if (!responseText) throw new Error("Sem imagens encontradas");
-      const images = JSON.parse(responseText);
+      
+      if (!responseText) throw new Error("Sem resposta do Gemini");
+      
+      // Limpeza básica para garantir que pegamos apenas o JSON caso venha com markdown
+      const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+      const cleanJson = jsonMatch ? jsonMatch[0] : responseText;
+      
+      console.log("AI Response for images:", responseText); // Debug
+      const images = JSON.parse(cleanJson);
       setImageOptions(Array.isArray(images) ? images : []);
     } catch (error: unknown) {
       const err = error as Error & { error?: { message?: string } };
       console.error("Image Search Error details:", err);
+      // Log the actual response if possible
+      if (typeof window !== 'undefined') {
+        console.log("Falha ao processar resposta AI. Verifique o formato JSON.");
+      }
 
       // Catch specific "API key not valid" error
       if (err.message?.includes("API key not valid") || (err.error?.message?.includes("API key not valid"))) {
