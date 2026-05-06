@@ -1,14 +1,20 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const rawKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+// Clean keys
+const supabaseUrl = rawUrl.trim().replace(/^["']|["']$/g, '');
+const supabaseAnonKey = rawKey.trim().replace(/^["']|["']$/g, '');
 
 // Singleton instance
 let supabaseInstance: ReturnType<typeof createClient> | null = null;
 
 export const getSupabase = () => {
-  if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('placeholder')) {
-    console.warn('Supabase credentials missing or invalid. Auth and database features will be disabled.');
+  if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('placeholder') || supabaseUrl.length < 10) {
+    if (typeof window !== 'undefined') {
+      console.warn('Supabase credentials missing or invalid. Auth and database features will be disabled.');
+    }
     return null;
   }
   

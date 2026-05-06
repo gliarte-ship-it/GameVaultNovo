@@ -1203,8 +1203,8 @@ const LibraryView = ({
     
     result.sort((a, b) => {
       if (sortBy === 'date') {
-        const timeA = new Date(a.createdAt).getTime() || 0;
-        const timeB = new Date(b.createdAt).getTime() || 0;
+        const timeA = new Date(a.created_at).getTime() || 0;
+        const timeB = new Date(b.created_at).getTime() || 0;
         return sortOrder === 'desc' ? timeB - timeA : timeA - timeB;
       }
       if (sortBy === 'rating') {
@@ -1712,10 +1712,10 @@ const CreditsModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => voi
                     <div className="flex justify-between items-center bg-black/20 p-2 rounded-lg">
                       <span className="text-[10px] text-[#948f98] uppercase">Banco de Dados (SQL):</span>
                       <span className={`text-[10px] font-bold ${
-                        (currentOrigin && !process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('placeholder')) 
+                        (!process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('placeholder') && process.env.NEXT_PUBLIC_SUPABASE_URL) 
                         ? "text-green-400" : "text-red-400"
                       }`}>
-                        {(currentOrigin && !process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('placeholder')) 
+                        {(!process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('placeholder') && process.env.NEXT_PUBLIC_SUPABASE_URL) 
                           ? "CONECTADO ✓" : "DESCONECTADO ✗"}
                       </span>
                     </div>
@@ -1794,11 +1794,11 @@ const CreditsModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => voi
 };
 
 export default function App() {
+  console.log("GameVault App Rendering...");
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('home');
   const [user, setUser] = useState<User | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [currentOrigin, setCurrentOrigin] = useState<string>('');
   const [games, setGames] = useState<Game[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGame, setEditingGame] = useState<Game | null>(null);
@@ -1866,7 +1866,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    setCurrentOrigin(window.location.origin);
+    // setCurrentOrigin(window.location.origin);
 
     if (!supabase) return;
 
@@ -2116,9 +2116,10 @@ export default function App() {
         onShowCredits={() => setIsCreditsOpen(true)}
       />
       
-      <main className="pt-28 pb-32 px-6 md:px-12 max-w-7xl mx-auto min-h-[80vh]">
+      <main id="main-content" className="pt-28 pb-32 px-6 md:px-12 max-w-7xl mx-auto min-h-[80vh]">
         {!user ? (
           <motion.div 
+            id="welcome-section"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="flex flex-col items-center justify-center py-20 text-center space-y-8"
@@ -2131,6 +2132,7 @@ export default function App() {
               <p className="text-slate-400">Entre na sua conta para começar a gerenciar sua biblioteca de jogos e acompanhar seu progresso de forma épica.</p>
             </div>
             <button 
+              id="login-button"
               onClick={signIn}
               disabled={isLoggingIn}
               className={`bg-[#00eefc] text-[#0d1229] px-10 py-4 rounded-2xl font-bold text-lg transition-all shadow-[0_0_30px_rgba(0,238,252,0.4)] flex items-center gap-3 ${isLoggingIn ? 'opacity-70 cursor-wait' : 'hover:scale-105 active:scale-95'}`}
@@ -2321,8 +2323,9 @@ export default function App() {
       </main>
 
       {user && (
-        <div className={`fixed bottom-28 right-8 z-50 transition-transform ${selectedGame ? 'scale-0' : 'scale-100'}`}>
+        <div id="fab-container" className={`fixed bottom-28 right-8 z-50 transition-transform ${selectedGame ? 'scale-0' : 'scale-100'}`}>
           <button 
+            id="add-game-fab"
             onClick={openAddModal}
             className="w-16 h-16 bg-[#00eefc] text-[#0d1229] rounded-full shadow-[0_0_30px_rgba(0,238,252,0.6)] flex items-center justify-center hover:scale-110 active:scale-90 transition-all group"
           >
