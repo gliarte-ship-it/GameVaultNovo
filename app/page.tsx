@@ -374,62 +374,68 @@ const GameModal = ({
     const title = watch('title');
     const query = customQuery || imageSearchQuery || `${title} game official vertical cover art`;
     
-    if (!query) return;
+    if (!query) {
+      showToast("Título do jogo não definido para busca.", "error");
+      return;
+    }
     
     setIsSearchingImages(true);
     setIsExtendedSearch(isExtended);
     setShowImageSelector(true);
-    if (!customQuery) setImageSearchQuery(query);
+    
+    // Sempre sincroniza o campo de input com o que está sendo buscado
+    setImageSearchQuery(query);
     setImageOptions([]);
     
     try {
       const ai = getAI();
       if (!ai) {
-        showToast("Gemini AI está desativada. Verifique as configurações nos Créditos.", "error");
+        showToast("AI desativada. Verifique as configurações.", "error");
         return;
       }
-      const prompt = `Find vertical cover art for: "${query}". 
-        Return ONLY a JSON array of 8 objects: {"url": "string", "source": "string"}.
-        CRITICAL: Use ONLY official direct image URLs from Xbox.com, PlayStation.com, Nintendo.com, Steam or Wikipedia.`;
+
+      // Prompt dinâmico baseado em busca comum vs ampliada
+      const sourceConstraint = isExtended 
+        ? "any high-quality gaming or image site (Flickr, Pinterest, Reddit, etc.)"
+        : "OFFICIAL sites ONLY (Xbox.com, PlayStation.com, Nintendo.com, Steam, Wikipedia)";
+
+      const prompt = `Find 8 vertical cover art images for: "${query}". 
+        Return ONLY a JSON array of objects: [{"url": "direct_image_url", "source": "site_name"}].
+        Constraint: Use ${sourceConstraint}. 
+        Ensure URLs are DIRECT links to images (jpg, png).`;
 
       const result = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: prompt,
       });
+
       const responseText = result.text;
+      if (!responseText) throw new Error("A IA retornou uma resposta vazia.");
       
-      if (!responseText) throw new Error("Sem resposta do Gemini");
-      
-      // Improved JSON extraction
       let cleanJson = responseText;
       const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        cleanJson = jsonMatch[0];
-      }
+      if (jsonMatch) cleanJson = jsonMatch[0];
       
-      console.log("AI Raw Response (Covers):", responseText);
+      console.log(`AI Response (Covers - Extended: ${isExtended}):`, responseText);
+      
       try {
         const images = JSON.parse(cleanJson);
-        setImageOptions(Array.isArray(images) ? images : []);
+        if (Array.isArray(images)) {
+          setImageOptions(images);
+          if (images.length === 0) showToast("Nenhuma imagem encontrada para este termo.", "error");
+        } else {
+          throw new Error("A IA não retornou uma lista válida.");
+        }
       } catch (jsonErr) {
-        console.error("JSON Parse Error:", jsonErr, "On text:", cleanJson);
-        throw new Error(`Erro de formato JSON da IA: ${jsonErr instanceof Error ? jsonErr.message : 'Desconhecido'}`);
+        console.error("JSON Error:", jsonErr, "Raw:", cleanJson);
+        throw new Error("Erro ao interpretar resposta da IA. Tente rebuscar.");
       }
     } catch (error: unknown) {
       const err = error as Error & { error?: { message?: string } };
-      console.error("Image Search Error detailed:", err);
+      console.error("SearchImages Error:", err);
       
-      let errorMessage = "Erro desconhecido ao buscar capas";
-      if (err.message) errorMessage = err.message;
-      if (err.error?.message) errorMessage = err.error.message;
-
-      // Catch specific "API key not valid" error
-      if (errorMessage.includes("API key not valid")) {
-        showToast("Chave Gemini inválida ou não configurada no Vercel (NEXT_PUBLIC_GEMINI_API_KEY)", "error");
-        return;
-      }
-
-      showToast(`Falha: ${errorMessage.substring(0, 50)}...`, "error");
+      const msg = err.message || err.error?.message || "Erro na conexão com Gemini";
+      showToast(`Falha: ${msg.substring(0, 40)}...`, "error");
     } finally {
       setIsSearchingImages(false);
     }
