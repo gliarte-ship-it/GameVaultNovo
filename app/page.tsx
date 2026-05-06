@@ -302,16 +302,15 @@ const GameModal = ({
         showToast("Gemini AI está desativada. Verifique as configurações nos Créditos.", "error");
         return;
       }
-      const model = ai.getGenerativeModel({
-        model: "gemini-1.5-flash",
-      });
-      
       const prompt = `Find information for game: "${queryStr}". Return ONLY a JSON array of 3 relevant games. 
         Each: {"title": "string", "platform": "string", "image": "string (Direct URL from official Xbox.com, PlayStation.com, Nintendo.com or Steam)", "id": "string", "rating": number, "description": "string"}. 
         Provide the "description" in Brazilian Portuguese.`;
 
-      const result = await model.generateContent(prompt);
-      const responseText = result.response.text();
+      const result = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+      });
+      const responseText = result.text;
       
       if (!responseText) throw new Error("Sem resposta do Gemini");
       
@@ -389,16 +388,15 @@ const GameModal = ({
         showToast("Gemini AI está desativada. Verifique as configurações nos Créditos.", "error");
         return;
       }
-      const model = ai.getGenerativeModel({
-        model: "gemini-1.5-flash",
-      });
-      
       const prompt = `Find vertical cover art for: "${query}". 
         Return ONLY a JSON array of 8 objects: {"url": "string", "source": "string"}.
         CRITICAL: Use ONLY official direct image URLs from Xbox.com, PlayStation.com, Nintendo.com, Steam or Wikipedia.`;
 
-      const result = await model.generateContent(prompt);
-      const responseText = result.response.text();
+      const result = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+      });
+      const responseText = result.text;
       
       if (!responseText) throw new Error("Sem resposta do Gemini");
       
@@ -1858,8 +1856,8 @@ export default function App() {
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
-    // Aumentado para 15 segundos para dar tempo de ler os erros no Vercel
-    setTimeout(() => setToast(null), 15000);
+    // Ajustado para 6 segundos: tempo suficiente para ler erros, sem ser irritante
+    setTimeout(() => setToast(null), 6000);
   };
 
   useEffect(() => {
