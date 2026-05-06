@@ -9,6 +9,11 @@ export default function AuthCallback() {
 
   useEffect(() => {
     const handleAuth = async () => {
+      if (!supabase) {
+        console.error("Supabase client not initialized in callback");
+        router.push('/');
+        return;
+      }
       try {
         const searchParams = new URLSearchParams(window.location.search);
         const code = searchParams.get('code');

@@ -3,8 +3,26 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase credentials missing. Auth and database features may not work.');
-}
+// Singleton instance
+let supabaseInstance: ReturnType<typeof createClient> | null = null;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const getSupabase = () => {
+  if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('placeholder')) {
+    console.warn('Supabase credentials missing or invalid. Auth and database features will be disabled.');
+    return null;
+  }
+  
+  if (!supabaseInstance) {
+    try {
+      supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
+    } catch (e) {
+      console.error('Failed to initialize Supabase client:', e);
+      return null;
+    }
+  }
+  return supabaseInstance;
+};
+
+// For backward compatibility and ease of use, we export the instance directly.
+// In a real application, you should handle the potential null value.
+export const supabase = getSupabase() as NonNullable<ReturnType<typeof createClient>>;

@@ -15,16 +15,23 @@ export interface GameSupabase {
 
 export const gameService = {
   async getGames() {
-    const { data, error } = await supabase
-      .from('games')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    return data as GameSupabase[];
+    if (!supabase) return [];
+    try {
+      const { data, error } = await supabase
+        .from('games')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data as GameSupabase[];
+    } catch (e) {
+      console.error('Error in getGames:', e);
+      return [];
+    }
   },
 
   async addGame(game: Omit<GameSupabase, 'id' | 'created_at' | 'updated_at'>) {
+    if (!supabase) throw new Error('Supabase not configured');
     const { data, error } = await supabase
       .from('games')
       .insert([game])
@@ -36,6 +43,7 @@ export const gameService = {
   },
 
   async updateGame(id: string, updates: Partial<GameSupabase>) {
+    if (!supabase) throw new Error('Supabase not configured');
     const { data, error } = await supabase
       .from('games')
       .update(updates)
@@ -48,6 +56,7 @@ export const gameService = {
   },
 
   async deleteGame(id: string) {
+    if (!supabase) throw new Error('Supabase not configured');
     const { error } = await supabase
       .from('games')
       .delete()

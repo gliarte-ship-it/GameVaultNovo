@@ -1868,9 +1868,15 @@ export default function App() {
   useEffect(() => {
     setCurrentOrigin(window.location.origin);
 
+    if (!supabase) return;
+
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setUser(session?.user ?? null);
+      } catch (e) {
+        console.error("Error getting session:", e);
+      }
     };
     checkSession();
 
@@ -1914,7 +1920,7 @@ export default function App() {
     window.addEventListener('storage', handleStorageChange);
 
     return () => {
-      subscription.unsubscribe();
+      if (subscription) subscription.unsubscribe();
       window.removeEventListener('message', handleAuthMessage);
       window.removeEventListener('storage', handleStorageChange);
     };
@@ -1963,6 +1969,8 @@ export default function App() {
       
       fetchGames();
 
+      if (!supabase) return;
+
       const channel = supabase
         .channel('games_realtime')
         .on('postgres_changes', { event: '*', table: 'games', filter: `owner_id=eq.${user.id}` }, () => {
@@ -1971,7 +1979,7 @@ export default function App() {
         .subscribe();
 
       return () => {
-        supabase.removeChannel(channel);
+        if (supabase) supabase.removeChannel(channel);
       };
     } else {
       setGames([]);
@@ -1979,6 +1987,10 @@ export default function App() {
   }, [user]);
 
   const signIn = async () => {
+    if (!supabase) {
+      showToast("Supabase não configurado. Adicione as chaves nos Secrets.", "error");
+      return;
+    }
     setIsLoggingIn(true);
     try {
       const redirectTo = `${window.location.origin}/auth/callback`;
@@ -2006,7 +2018,7 @@ export default function App() {
   };
 
   const handleLogOut = async () => {
-    await supabase.auth.signOut();
+    if (supabase) await supabase.auth.signOut();
   };
 
   const handleSaveGame = async (data: GameFormData) => {
