@@ -1,6 +1,6 @@
 'use client';
 
-// Force Build: 2024-05-06_1648 (Fix: Covers & Domains)
+// Force Build: 2024-05-06_1727 (Debug: Longer Toasts)
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
@@ -1858,7 +1858,8 @@ export default function App() {
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
+    // Aumentado para 15 segundos para dar tempo de ler os erros no Vercel
+    setTimeout(() => setToast(null), 15000);
   };
 
   useEffect(() => {
