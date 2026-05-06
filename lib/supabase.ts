@@ -4,8 +4,12 @@ const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const rawKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 // Clean keys
-const supabaseUrl = rawUrl.trim().replace(/^["']|["']$/g, '');
-const supabaseAnonKey = rawKey.trim().replace(/^["']|["']$/g, '');
+const supabaseUrl = rawUrl.trim()
+  .replace(/^["']|["']$/g, '')
+  .replace(/^NEXT_PUBLIC_SUPABASE_URL=/, '');
+const supabaseAnonKey = rawKey.trim()
+  .replace(/^["']|["']$/g, '')
+  .replace(/^NEXT_PUBLIC_SUPABASE_ANON_KEY=/, '');
 
 // Singleton instance
 let supabaseInstance: ReturnType<typeof createClient> | null = null;

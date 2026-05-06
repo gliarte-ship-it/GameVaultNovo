@@ -8,6 +8,7 @@ export default function AuthCallback() {
   const router = useRouter();
 
   useEffect(() => {
+    console.log("AuthCallback: Componente montado. URL:", window.location.href);
     const handleAuth = async () => {
       if (!supabase) {
         console.error("Supabase client not initialized in callback");

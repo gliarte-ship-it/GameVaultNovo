@@ -423,7 +423,7 @@ const GameModal = ({
         }
       });
       
-      const responseText = result.text;
+      const responseText = result.response.text();
       if (!responseText) throw new Error("Sem imagens encontradas");
       const images = JSON.parse(responseText);
       setImageOptions(Array.isArray(images) ? images : []);
@@ -1219,7 +1219,7 @@ const LibraryView = ({
     });
 
     return result;
-  }, [games, filter, sortBy, sortOrder]);
+  }, [games, filter, sortBy, sortOrder, searchTerm]);
 
   const exportToPDF = () => {
     const doc = new jsPDF();
@@ -1829,7 +1829,8 @@ export default function App() {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // Register simple service worker
+    // Register simple service worker - Disabled to avoid cache issues in preview
+    /*
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
         navigator.serviceWorker.register('/sw.js').then(
@@ -1842,6 +1843,7 @@ export default function App() {
         );
       });
     }
+    */
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
